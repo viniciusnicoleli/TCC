@@ -26,7 +26,7 @@ class utilities():
         return(X_train, y_train, X_test, y_test, X_val, y_val)
 
 
-    def create_prep_pipe(dataframe : pd.DataFrame, target_column : str) -> (sklearn.pipeline.FeatureUnion, pd.Series, pd.Series):
+    def create_prep_pipe(dataframe : pd.DataFrame, target_column : str):
         dataframe = dataframe.drop(labels = [target_column], axis = 1)
         num_cols = dataframe.select_dtypes(include=[float, int]).columns
         cat_cols = dataframe.select_dtypes(include=[object, pd.datetime]).columns
@@ -108,4 +108,6 @@ class utilities():
         sns.distplot(list_1, kde = True, ax = axs[1], hist = True, bins = 100)
         sns.distplot(list_2, kde = True, ax = axs[1], hist = True, bins = 100)
         
-        axs[1].set_title('valid Thereshold Curve')    
+        axs[1].set_title('valid Thereshold Curve')
+
+    
