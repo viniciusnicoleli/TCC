@@ -158,4 +158,4 @@ class tcc_lgbm():
         y_score_train = self._pipe_final.predict_proba(X_train)[:,1]
         y_score_val = self._pipe_final.predict_proba(X_val)[:,1]
         
-        plot_dist(y_train, y_score_train, y_val, y_score_val)
+        ult.plot_dist(y_train, y_score_train, y_val, y_score_val)
