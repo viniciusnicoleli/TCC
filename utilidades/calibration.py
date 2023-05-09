@@ -10,6 +10,8 @@ from sklearn.impute import SimpleImputer
 from sklearn.pipeline import FeatureUnion
 import matplotlib.pyplot as plt
 import seaborn as sns
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder
 
 class utilities():    
     def splitxy(dataframe : pd.DataFrame, y : str = 'target'):
@@ -77,6 +79,60 @@ class utilities():
             ], verbose = False) 
             
             return (prep_feat, [], cat_cols.values)
+
+    def create_prep_pipe2(dataframe : pd.DataFrame, target_column : str):
+        dataframe = dataframe.drop(labels = [target_column], axis = 1)
+        num_cols = dataframe.select_dtypes(include=[float, int]).columns
+        cat_cols = dataframe.select_dtypes(include=[object, pd.datetime]).columns
+        
+        if num_cols.values.shape[0] > 0:
+            pipe_num = Pipeline(
+            steps = [
+                ("selector_num", ColumnTransformer([("selector", "passthrough", num_cols.values)], remainder = 'drop')),
+                ('num_imputer', SimpleImputer(strategy='mean'),
+                ('standard_scaller', StandardScaler()))
+            ])
+        else:
+            pipe_num = None
+            
+        if cat_cols.values.shape[0] > 0:
+            pipe_cat = Pipeline(
+            steps = [
+                ("selector_cat", ColumnTransformer([("selector", "passthrough", cat_cols.values)], remainder = 'drop')),
+                ("OneHotEnc", OneHotEncoder(handle_unknown = "use_encoded_value")),
+                ('cat_imputer', SimpleImputer(strategy='constant', fill_value='None'))
+            ])        
+        else:
+            pipe_cat = None
+        
+        if pipe_num is not None and pipe_cat is not None:
+            prep_feat = FeatureUnion(
+            transformer_list = [
+                ('num_pipe', pipe_num),
+                ('cat_pipe', pipe_cat)
+                
+            ], verbose = False)  
+            
+            return (prep_feat, num_cols.values, cat_cols.values)
+
+        if pipe_num is not None and pipe_cat is None:
+            prep_feat = FeatureUnion(
+            transformer_list = [
+                ('num_pipe', pipe_num)
+                
+            ], verbose = False)
+            
+            return (prep_feat, num_cols.values, [])
+
+        if pipe_num is None and pipe_cat is not None:
+            prep_feat = FeatureUnion(
+            transformer_list = [
+                ('cat_pipe', pipe_cat)
+                
+            ], verbose = False) 
+            
+            return (prep_feat, [], cat_cols.values)
+
 
 
     def plot_dist(y_train, pred_proba_train, y_val, pred_proba_val):
