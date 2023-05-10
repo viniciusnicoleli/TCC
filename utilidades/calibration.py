@@ -89,8 +89,8 @@ class utilities():
             pipe_num = Pipeline(
             steps = [
                 ("selector_num", ColumnTransformer([("selector", "passthrough", num_cols.values)], remainder = 'drop')),
-                ('num_imputer', SimpleImputer(strategy='mean'),
-                ('standard_scaller', StandardScaler()))
+                ('num_imputer', SimpleImputer(strategy='mean')),
+                ('standard_scaller', StandardScaler())
             ])
         else:
             pipe_num = None
@@ -99,8 +99,8 @@ class utilities():
             pipe_cat = Pipeline(
             steps = [
                 ("selector_cat", ColumnTransformer([("selector", "passthrough", cat_cols.values)], remainder = 'drop')),
-                ("OneHotEnc", OneHotEncoder(handle_unknown = "use_encoded_value")),
-                ('cat_imputer', SimpleImputer(strategy='constant', fill_value='None'))
+                ('cat_imputer', SimpleImputer(strategy='constant', fill_value='None')),
+                ("OneHotEnc", OneHotEncoder(handle_unknown = "error"))
             ])        
         else:
             pipe_cat = None
