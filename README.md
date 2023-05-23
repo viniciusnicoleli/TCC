@@ -43,7 +43,7 @@ ________________________________________________________________________________
 ______________________________________________________________________________________________________________________________
 ### :diamond_shape_with_a_dot_inside: Any doubts about this repo?
 * viniciusnicoleli@gmail.com
-* felipelimaaruajo@gmail.com
+* felipelimaaraujo@gmail.com
 
 
 
