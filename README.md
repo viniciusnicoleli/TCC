@@ -29,8 +29,6 @@ For now we don't have the intention to drop it as a package...
 ______________________________________________________________________________________________________________________________
 ### :diamond_shape_with_a_dot_inside: Methods implemented:
 
-Methods implemented:
-
 * New Method created by @felipearaujolima
 * SVM Balance from smote-variants package
 * DBSMOTE from smote-variants package
