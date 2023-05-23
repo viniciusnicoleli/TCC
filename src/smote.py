@@ -1,66 +1,58 @@
-# For all Class
-import smote_variants as sv
-import pandas as pd
-import numpy as np
-import sklearn as sk
+import warnings
+warnings.filterwarnings('ignore')
 
-# Getting utilidades
+import sklearn
+import imblearn
+import numpy as np
+import pandas as pd
+
 import os, sys
 sys.path.insert(0, os.path.abspath(".."))
 from utilidades.calibration import utilities as ult
 
-
-# For function fit
-import sklearn.pipeline
-from sklearn.preprocessing import FunctionTransformer
-from sklearn.pipeline import Pipeline
-
-# LGBM
-from skopt.space import Real, Categorical, Integer
 from skopt import BayesSearchCV
-from lightgbm import early_stopping
-from lightgbm import LGBMClassifier
-from sklearn.model_selection import StratifiedShuffleSplit
+
+from imblearn.over_sampling import SMOTE
+from skopt.space import Real, Categorical, Integer
+
+from lightgbm import LGBMClassifier, early_stopping
+
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import FunctionTransformer
 from sklearn.metrics import average_precision_score
+from sklearn.model_selection import StratifiedShuffleSplit
 
-
-class svm_balance_tcc():
-    def __init__(self, dataframe : pd.DataFrame, target: str,metric : str = 'average_precision', pipe_final : sklearn.pipeline = None):
+class tcc_smote():
+    def __init__(self, dataframe : pd.DataFrame, target: str, metric : str = 'average_precision', pipe_final : sklearn.pipeline = None):
         self.dataframe = dataframe
         self.target = target
         self.metric = metric
         self._pipe_final = pipe_final
     
-    def fit(self,random_state=42):
-
-        self.X,y = ult.splitxy(self.dataframe,self.target)
-
-        self.X_forfit = self.X.to_numpy()
-
-        self.X_train, self.y_train, self.X_test, self.y_test, self.X_val, self.y_val = ult.train_test_val(self.X_forfit,y)
-
-        self.X_test = pd.DataFrame(self.X_test,columns=self.X.columns)
-
-        prep_feat_tuple = ult.create_prep_pipe2(self.dataframe,self.target)
-        self.prep_feat = prep_feat_tuple[0]
-
-        self.lists_pandarizer = list(prep_feat_tuple[1]) + list(prep_feat_tuple[2])
-
-        self.X_train_smote, self.y_train_smote = self.svm_vr2_0()
-
-        self.pipe_prep = Pipeline([
-                    ('transformer_prep', self.prep_feat),
-                    ("pandarizer", FunctionTransformer(lambda x: pd.DataFrame(x, columns = self.lists_pandarizer))),
-                ])
-        self.pipe_prep.fit(self.X_train_smote)
+    def fit(self):
+        X, y = ult.splitxy(self.dataframe, self.target)
+        X_train, y_train, X_test, y_test, X_val, y_val = ult.train_test_val(X,y)
+    
+        prep_feat_tuple = ult.create_prep_pipe(self.dataframe, self.target)
+        prep_feat = prep_feat_tuple[0]
+    
+        lists_pandarizer = list(prep_feat_tuple[1]) + list(prep_feat_tuple[2])
         
         LGBM = LGBMClassifier(random_state = 42, n_jobs = -1)
 
         pipe_tuning = Pipeline([
-            ('transformer_prep', self.prep_feat),
-            ("pandarizer", FunctionTransformer(lambda x: pd.DataFrame(x, columns = self.lists_pandarizer))),
+            ('transformer_prep', prep_feat),
+            ("pandarizer", FunctionTransformer(lambda x: pd.DataFrame(x, columns = lists_pandarizer))),
             ('estimator', LGBM)
         ])
+        
+        pipe_prep = Pipeline([
+            ('transformer_prep', prep_feat),
+            ("pandarizer", FunctionTransformer(lambda x: pd.DataFrame(x, columns = lists_pandarizer))),
+        ])
+        pipe_prep.fit(X_train)       
+        smote = SMOTE()
+        X_train_smote, y_train_smote = smote.fit_resample(pipe_prep.transform(X_train), y_train)        
         
         cv = StratifiedShuffleSplit(n_splits = 5, test_size = 0.3, random_state = 42)
         
@@ -68,7 +60,7 @@ class svm_balance_tcc():
         
         fit_params = {
             'eval_metric': metric, 
-            'eval_set': [(self.X_test, pd.DataFrame(self.y_test))],
+            'eval_set': [(X_test, pd.DataFrame(y_test))],
             'callbacks': [(early_stopping(stopping_rounds = 10, verbose = True))],
         }        
         
@@ -88,11 +80,11 @@ class svm_balance_tcc():
         LGBM_bayes_search = BayesSearchCV(pipe_tuning, LGBM_search_space, n_iter = 2, scoring = metric, 
                                          return_train_score = True, 
                                          fit_params = fit_params,
-                                         n_jobs = -1, cv = cv, random_state = random_state, optimizer_kwargs = {'base_estimator': 'GP'})
+                                         n_jobs = -1, cv = cv, random_state = 42, optimizer_kwargs = {'base_estimator': 'GP'})
         
         
-        LGBM_bayes_search.fit(self.pipe_prep.transform(self.X_train_smote), self.y_train_smote)        
-
+        LGBM_bayes_search.fit(X_train_smote, y_train_smote)        
+        
         results_cv = pd.DataFrame(LGBM_bayes_search.cv_results_)
         
         temp = results_cv[['mean_train_score', 'mean_test_score']]
@@ -103,29 +95,20 @@ class svm_balance_tcc():
         kwargs = params.params   
         print(kwargs)
         
-        best_LGBM = LGBMClassifier(random_state = random_state, n_jobs = -1, verbose = -1, **kwargs)
+        best_LGBM = LGBMClassifier(random_state = 42, n_jobs = -1, verbose = -1, **kwargs)
         
-        best_LGBM.fit(self.pipe_prep.transform(self.X_train_smote), self.y_train_smote, early_stopping_rounds = 10, verbose = 20, eval_metric = metric,
-                     eval_set = [(self.pipe_prep.transform(self.X_test), self.y_test)]) 
+        best_LGBM.fit(X_train_smote, y_train_smote, early_stopping_rounds = 10, verbose = 20, eval_metric = metric,
+                     eval_set = [(pipe_prep.transform(X_test), y_test)]) 
         
         
         pipe_final = Pipeline(
         [
-            ('pipe_transformer_prep', self.pipe_prep),
+            ('pipe_transformer_prep', pipe_prep),
             ('pipe_estimator', best_LGBM)
         ])       
         
         self._pipe_final = pipe_final
         
-    def svm_vr2_0(self):
-        
-        svm = sv.SVM_balance(random_state=42)
-        X_train_smote, y_train_smote = svm.sample(self.X_train,
-                                                             self.y_train)
-
-        X_train_smote = pd.DataFrame(X_train_smote,columns=self.X.columns)
-        return(X_train_smote,y_train_smote)
-
     def predict_proba(self, who : str = 'val'):
         if self._pipe_final is None:
             return None

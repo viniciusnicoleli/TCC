@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import OneHotEncoder
+from datetime import datetime
 
 class utilities():    
     def splitxy(dataframe : pd.DataFrame, y : str = 'target'):
@@ -31,7 +32,7 @@ class utilities():
     def create_prep_pipe(dataframe : pd.DataFrame, target_column : str):
         dataframe = dataframe.drop(labels = [target_column], axis = 1)
         num_cols = dataframe.select_dtypes(include=[float, int]).columns
-        cat_cols = dataframe.select_dtypes(include=[object, pd.datetime]).columns
+        cat_cols = dataframe.select_dtypes(include=[object, np.datetime64]).columns
         
         if num_cols.values.shape[0] > 0:
             pipe_num = Pipeline(
@@ -83,7 +84,7 @@ class utilities():
     def create_prep_pipe2(dataframe : pd.DataFrame, target_column : str):
         dataframe = dataframe.drop(labels = [target_column], axis = 1)
         num_cols = dataframe.select_dtypes(include=[float, int]).columns
-        cat_cols = dataframe.select_dtypes(include=[object, pd.datetime]).columns
+        cat_cols = dataframe.select_dtypes(include=[object, np.datetime64]).columns
         
         if num_cols.values.shape[0] > 0:
             pipe_num = Pipeline(

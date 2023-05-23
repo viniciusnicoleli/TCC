@@ -1,23 +1,30 @@
+from src.AdaCostClassing import AdaCostClassifier_tcc as tcc
+
+# Warnings
 import warnings
 warnings.filterwarnings('ignore')
-import sklearn
-import numpy as np
-import pandas as pd
 
 import os, sys
 sys.path.insert(0, os.path.abspath(".."))
 from utilidades.calibration import utilities as ult
 
-from skopt import BayesSearchCV
-from skopt.space import Real, Categorical, Integer
-from lightgbm import LGBMClassifier, early_stopping
+# Basic imports
+import sklearn
+import collections
+import numpy as np
+import pandas as pd
 
+# Model.
+from skopt import BayesSearchCV
+from skopt.space import Real, Integer
+from lightgbm import early_stopping
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.metrics import average_precision_score
 from sklearn.model_selection import StratifiedShuffleSplit
 
-class tcc_lgbm():
+
+class tcc_adacost():
     def __init__(self, dataframe : pd.DataFrame, target: str, metric : str = 'average_precision', pipe_final : sklearn.pipeline = None):
         self.dataframe = dataframe
         self.target = target
@@ -33,12 +40,12 @@ class tcc_lgbm():
     
         lists_pandarizer = list(prep_feat_tuple[1]) + list(prep_feat_tuple[2])
         
-        LGBM = LGBMClassifier(random_state = 42, n_jobs = -1)
+        ADACOST = tcc.AdaCostClassifier(random_state = 42)
 
         pipe_tuning = Pipeline([
             ('transformer_prep', prep_feat),
             ("pandarizer", FunctionTransformer(lambda x: pd.DataFrame(x, columns = lists_pandarizer))),
-            ('estimator', LGBM)
+            ('estimator', ADACOST)
         ])
         
         pipe_prep = Pipeline([
@@ -56,29 +63,24 @@ class tcc_lgbm():
             'eval_set': [(X_test, pd.DataFrame(y_test))],
             'callbacks': [(early_stopping(stopping_rounds = 10, verbose = True))],
         }        
-        
-        LGBM_search_space = {
-            "estimator__learning_rate": Real(0.001, 0.01, prior = 'log-uniform'),
+        ratio = sum(y_train==0)/sum(y_train==1)
+        ADACOST_search_space = {
+            "estimator__learning_rate": Real(0.001, 1, prior = 'log-uniform'),
             "estimator__n_estimators": Integer(100, 1000),
-            "estimator__class_weight": Categorical(['balanced', None]),
-            "estimator__num_leaves": Integer(32, 256),
-            "estimator__min_child_samples": Integer(100, 1000),
-            "estimator__reg_alpha": Real(0, 100, prior = 'uniform'),
-            "estimator__reg_lambda": Real(10., 200., prior = 'uniform'),
-            "estimator__objective": Categorical(['binary']),
-            "estimator__importance_type":Categorical(['gain']),
-            "estimator__boosting_type": Categorical(['goss'])
+            "estimator__FPcost": Real(0.5, 1, prior = 'log-uniform'),
+            "estimator__FNcost": Real(1.1, ratio, prior = 'log-uniform')
+
         }    
         
-        LGBM_bayes_search = BayesSearchCV(pipe_tuning, LGBM_search_space, n_iter = 2, scoring = metric, 
+        ADACOST_bayes_search = BayesSearchCV(pipe_tuning, ADACOST_search_space, n_iter = 10, scoring = metric, 
                                          return_train_score = True, 
                                          fit_params = fit_params,
                                          n_jobs = -1, cv = cv, random_state = 42, optimizer_kwargs = {'base_estimator': 'GP'})
         
         
-        LGBM_bayes_search.fit(X_train, y_train)        
+        ADACOST_bayes_search.fit(X_train, y_train)        
         
-        results_cv = pd.DataFrame(LGBM_bayes_search.cv_results_)
+        results_cv = pd.DataFrame(ADACOST_bayes_search.cv_results_)
         
         temp = results_cv[['mean_train_score', 'mean_test_score']]
         temp['diff'] = temp['mean_test_score'] - temp['mean_train_score']
@@ -86,18 +88,18 @@ class tcc_lgbm():
         
         params = results_cv.loc[to_go.values[0]]
         kwargs = params.params   
-        print(kwargs)
+        kwargs = collections.OrderedDict((key.replace('estimator__', ''), value) for key, value in kwargs.items())
+        print(kwargs)        
         
-        best_LGBM = LGBMClassifier(random_state = 42, n_jobs = -1, verbose = -1, **kwargs)
+        best_ADACOST = tcc.AdaCostClassifier(random_state = 42, **kwargs)
         
-        best_LGBM.fit(pipe_prep.transform(X_train), y_train, early_stopping_rounds = 10, verbose = 20, eval_metric = metric,
-                     eval_set = [(pipe_prep.transform(X_test), y_test)]) 
+        best_ADACOST.fit(pipe_prep.transform(X_train), y_train) 
         
         
         pipe_final = Pipeline(
         [
             ('pipe_transformer_prep', pipe_prep),
-            ('pipe_estimator', best_LGBM)
+            ('pipe_estimator', best_ADACOST)
         ])       
         
         self._pipe_final = pipe_final
