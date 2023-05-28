@@ -47,7 +47,7 @@ class cdbh_functions():
                     
                     dataframe_densidade_index.iloc[index] = dataframe_densidade_index.iloc[index] + 1
                 
-                final_list = pd.concat([final_list, dataframe_densidade_index], 0)
+                final_list = pd.concat([final_list, dataframe_densidade_index], axis=0)
             
         return final_list
 
@@ -61,12 +61,12 @@ class cdbh_functions():
         
         X_train_mino['prob'] = X_train_mino['density'].apply(lambda x: x/X_train_mino['density'].sum())
         
-        X_train_mino_out = X_train_mino.drop(['cluster', 'density', 'prob'], 1).copy()
-        temp_kdtree = KDTree(X_train_mino.drop(['cluster', 'density', 'prob'], 1))
-        IR = df_train[df_train['Class'] == 0].drop(['Class'], 1).shape[0] / X_train_mino.shape[0]
+        X_train_mino_out = X_train_mino.drop(['cluster', 'density', 'prob'], axis=1).copy()
+        temp_kdtree = KDTree(X_train_mino.drop(['cluster', 'density', 'prob'], axis=1))
+        IR = df_train[df_train['Class'] == 0].drop(['Class'], axis=1).shape[0] / X_train_mino.shape[0]
         while IR > 2:
             i = choices(X_train_mino.index, weights=X_train_mino.prob, k=1)
-            vector_i = X_train_mino[X_train_mino.index == i[0]].drop(['cluster', 'density', 'prob'], 1)
+            vector_i = X_train_mino[X_train_mino.index == i[0]].drop(['cluster', 'density', 'prob'], axis=1)
         
             distances, index = temp_kdtree.query(vector_i, k_s)  
             
@@ -88,7 +88,7 @@ class cdbh_functions():
         
             X_train_mino_out.index = X_train_mino_out.index + 1    
             
-            IR = df_train[df_train['Class'] == 0].drop(['Class'], 1).shape[0] / X_train_mino_out.shape[0]
+            IR = df_train[df_train['Class'] == 0].drop(['Class'], axis=1).shape[0] / X_train_mino_out.shape[0]
         
         X_train_majo = df_train[df_train['Class'] == 0]
         
@@ -104,13 +104,13 @@ class cdbh_functions():
             i = choices(X_train_majo.index, weights=X_train_majo.prob, k=1)
             vector_i = X_train_majo[X_train_majo.index == i[0]].index.values
         
-            X_train_majo = X_train_majo.drop(vector_i, 0)
+            X_train_majo = X_train_majo.drop(vector_i, axis=0)
             
         
-        X_train_majo_out = X_train_majo.drop(['cluster', 'density', 'prob'], 1).copy()
+        X_train_majo_out = X_train_majo.drop(['cluster', 'density', 'prob'], axis=1).copy()
         
         
 
-        X_train_out = pd.concat([X_train_mino_out, X_train_majo_out], 0)
+        X_train_out = pd.concat([X_train_mino_out, X_train_majo_out], axis=0)
         
         return (X_train_out)        
