@@ -13,6 +13,8 @@ import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import OneHotEncoder
 from datetime import datetime
+import csv
+import os
 
 class utilities():    
     def splitxy(dataframe : pd.DataFrame, y : str = 'target'):
@@ -47,8 +49,8 @@ class utilities():
             pipe_cat = Pipeline(
             steps = [
                 ("selector_cat", ColumnTransformer([("selector", "passthrough", cat_cols.values)], remainder = 'drop')),
-                ("OrdinalEnc", OrdinalEncoder(handle_unknown = "use_encoded_value", unknown_value = -1)),
-                ('cat_imputer', SimpleImputer(strategy='constant', fill_value='None'))
+                ('cat_imputer', SimpleImputer(strategy='most_frequent')),
+                ("OrdinalEnc", OrdinalEncoder(handle_unknown = "use_encoded_value", unknown_value = -1))
             ])        
         else:
             pipe_cat = None
@@ -60,7 +62,7 @@ class utilities():
                 ('cat_pipe', pipe_cat)
                 
             ], verbose = False)  
-            
+            print(dataframe[cat_cols])
             return (prep_feat, num_cols.values, cat_cols.values)
 
         if pipe_num is not None and pipe_cat is None:
@@ -69,7 +71,7 @@ class utilities():
                 ('num_pipe', pipe_num)
                 
             ], verbose = False)
-            
+            # print('jaggers',dataframe[cat_cols])
             return (prep_feat, num_cols.values, [])
 
         if pipe_num is None and pipe_cat is not None:
@@ -78,13 +80,14 @@ class utilities():
                 ('cat_pipe', pipe_cat)
                 
             ], verbose = False) 
-            
             return (prep_feat, [], cat_cols.values)
 
     def create_prep_pipe2(dataframe : pd.DataFrame, target_column : str):
         dataframe = dataframe.drop(labels = [target_column], axis = 1)
         num_cols = dataframe.select_dtypes(include=[float, int]).columns
         cat_cols = dataframe.select_dtypes(include=[object, np.datetime64]).columns
+
+        print(num_cols,cat_cols)
         
         if num_cols.values.shape[0] > 0:
             pipe_num = Pipeline(
@@ -95,13 +98,15 @@ class utilities():
             ])
         else:
             pipe_num = None
-            
+
         if cat_cols.values.shape[0] > 0:
+            print('entrando no cat')
+            print(cat_cols.values)
             pipe_cat = Pipeline(
             steps = [
                 ("selector_cat", ColumnTransformer([("selector", "passthrough", cat_cols.values)], remainder = 'drop')),
-                ('cat_imputer', SimpleImputer(strategy='constant', fill_value='None')),
-                ("OneHotEnc", OneHotEncoder(handle_unknown = "error"))
+                ('cat_imputer', SimpleImputer(strategy='most_frequent')),
+                ("OrdinalEnc", OrdinalEncoder(handle_unknown = "use_encoded_value", unknown_value = -1))
             ])        
         else:
             pipe_cat = None
@@ -113,7 +118,11 @@ class utilities():
                 ('cat_pipe', pipe_cat)
                 
             ], verbose = False)  
-            
+            print('Deu boas')
+            print(dataframe[cat_cols])
+            print(num_cols.values)
+            print(cat_cols.values)
+            print('oi')
             return (prep_feat, num_cols.values, cat_cols.values)
 
         if pipe_num is not None and pipe_cat is None:
@@ -167,4 +176,30 @@ class utilities():
         
         axs[1].set_title('valid Thereshold Curve')
 
+        print('Saving fig')
+        strFile = 'grafico_dist_base_0.png'
+        while True:        
+            if os.path.isfile(strFile):
+                print('This file already exist, adding one')
+                id = int(strFile[-5]) + 1
+                strFile = strFile[:-5] + str(id) + strFile[-4:]
+            else:
+                print('Plot finished')
+                break
+        plt.savefig(strFile)
+
+    def get_ir(df, target):
+        valuer = df[target].value_counts().values.tolist()
+        maxin = max(valuer)
+        minin = min(valuer)
+
+        return maxin/minin
     
+    def transform_dat_to_csv(name_archive):
+        # read flash.dat to a list of lists
+        datContent = [i.strip().split() for i in open(name_archive).readlines()]
+
+        # write it as a new CSV file
+        with open(name_archive, "wb") as f:
+            writer = csv.writer(f)
+            writer.writerows(datContent)

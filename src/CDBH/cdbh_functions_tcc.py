@@ -15,6 +15,9 @@ class cdbh_functions():
     def funcao_return_cluster(self,dataframe : pd.DataFrame) -> pd.Series:
             k_s = round(math.sqrt(dataframe.shape[0]),0)
             k_s = int(k_s)  
+
+            if k_s == 0:
+                k_s = 1
             
             k_means = KMeans(n_clusters=k_s, random_state=42)
             k_means.fit(dataframe) 

@@ -34,24 +34,28 @@ class mct_tcc():
 
         self.X,y = ult.splitxy(self.dataframe,self.target)
 
-        self.X_forfit = self.X.to_numpy()
+        self.X_train, self.y_train, self.X_test, self.y_test, self.X_val, self.y_val = ult.train_test_val(self.X,y)
 
-        self.X_train, self.y_train, self.X_test, self.y_test, self.X_val, self.y_val = ult.train_test_val(self.X_forfit,y)
-
-        self.X_test = pd.DataFrame(self.X_test,columns=self.X.columns)
+        # self.X_test = pd.DataFrame(self.X_test,columns=self.X.columns)
 
         prep_feat_tuple = ult.create_prep_pipe(self.dataframe,self.target)
         self.prep_feat = prep_feat_tuple[0]
 
         self.lists_pandarizer = list(prep_feat_tuple[1]) + list(prep_feat_tuple[2])
 
-        self.X_train_mct, self.y_train_mct = self.mct()
-
         self.pipe_prep = Pipeline([
                     ('transformer_prep', self.prep_feat),
                     ("pandarizer", FunctionTransformer(lambda x: pd.DataFrame(x, columns = self.lists_pandarizer))),
                 ])
-        self.pipe_prep.fit(self.X_train_mct)
+        self.pipe_prep.fit(self.X_train)
+
+        self.X_train = self.pipe_prep.transform(self.X_train)
+
+        self.X_train = self.X_train.to_numpy()
+
+        print(self.X_train)
+
+        self.X_train_mct, self.y_train_mct = self.mct()
         
         LGBM = LGBMClassifier(random_state = 42, n_jobs = -1)
 
@@ -90,7 +94,7 @@ class mct_tcc():
                                          n_jobs = -1, cv = cv, random_state = random_state, optimizer_kwargs = {'base_estimator': 'GP'})
         
         
-        LGBM_bayes_search.fit(self.pipe_prep.transform(self.X_train_mct), self.y_train_mct)        
+        LGBM_bayes_search.fit(self.X_train_mct, self.y_train_mct)        
 
         results_cv = pd.DataFrame(LGBM_bayes_search.cv_results_)
         
@@ -104,7 +108,7 @@ class mct_tcc():
         
         best_LGBM = LGBMClassifier(random_state = random_state, n_jobs = -1, verbose = -1, **kwargs)
         
-        best_LGBM.fit(self.pipe_prep.transform(self.X_train_mct), self.y_train_mct, early_stopping_rounds = 10, verbose = 20, eval_metric = metric,
+        best_LGBM.fit(self.X_train_mct, self.y_train_mct, early_stopping_rounds = 10, verbose = 20, eval_metric = metric,
                      eval_set = [(self.pipe_prep.transform(self.X_test), self.y_test)]) 
         
         

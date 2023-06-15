@@ -19,6 +19,7 @@ from lightgbm import LGBMClassifier, early_stopping
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.metrics import average_precision_score
+from sklearn.model_selection import StratifiedShuffleSplit
 
 
 
@@ -62,7 +63,7 @@ class tcc_cdbh():
         df_train_cdbh = cdbhzer.cdbh(df_train=df_train)
         X_train_cdbh, y_train_cdbh = ult.splitxy(df_train_cdbh, 'Class')
         
-        cv = ult.StratifiedShuffleSplit(n_splits = 5, test_size = 0.3, random_state = 42)
+        cv = StratifiedShuffleSplit(n_splits = 5, test_size = 0.3, random_state = 42)
         
         metric = self.metric
         
@@ -97,7 +98,7 @@ class tcc_cdbh():
         
         temp = results_cv[['mean_train_score', 'mean_test_score']]
         temp['diff'] = temp['mean_test_score'] - temp['mean_train_score']
-        to_go = temp[abs(temp['diff']) < 0.05].sort_values(by = 'mean_test_score', ascending = False).head(1).index
+        to_go = temp[abs(temp['diff']) < 0.30].sort_values(by = 'mean_test_score', ascending = False).head(1).index
         
         params = results_cv.loc[to_go.values[0]]
         kwargs = params.params   

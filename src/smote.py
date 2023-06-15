@@ -89,7 +89,7 @@ class tcc_smote():
         
         temp = results_cv[['mean_train_score', 'mean_test_score']]
         temp['diff'] = temp['mean_test_score'] - temp['mean_train_score']
-        to_go = temp[abs(temp['diff']) < 0.05].sort_values(by = 'mean_test_score', ascending = False).head(1).index
+        to_go = temp[abs(temp['diff']) < 0.20].sort_values(by = 'mean_test_score', ascending = False).head(1).index
         
         params = results_cv.loc[to_go.values[0]]
         kwargs = params.params   

@@ -33,13 +33,15 @@ class tcc_indices_to_resample():
         temp = temp[temp[self.target] == 1]
         
         X, y = ult.splitxy(temp, self.target)
-        
+
         scaler = StandardScaler()
         X_ = scaler.fit_transform(X)
         X_ = pd.DataFrame(X_, columns = X.columns, index = X.index)
         
         ce = clusteval(cluster='agglomerative', evaluate='silhouette')
-        
+        X_.replace([np.inf, -np.inf], np.nan, inplace=True)
+        X_.dropna(inplace=True)
+
         results = ce.fit(X_)
         X_['clusters'] = results['labx']
         
@@ -141,7 +143,7 @@ class tcc_indices_to_resample():
                     
                     dataframe_densidade_index.iloc[index] = dataframe_densidade_index.iloc[index] + 1
                 
-                final_list = pd.concat([final_list, dataframe_densidade_index], 0)
+                final_list = pd.concat([final_list, dataframe_densidade_index], axis=0)
             
         return final_list
     
@@ -155,12 +157,12 @@ class tcc_indices_to_resample():
         
         X_train_mino['prob'] = X_train_mino['density'].apply(lambda x: x/X_train_mino['density'].sum())
         
-        X_train_mino_out = X_train_mino.drop(['cluster', 'density', 'prob'], 1).copy()
-        temp_kdtree = KDTree(X_train_mino.drop(['cluster', 'density', 'prob'], 1))
-        IR = df_train[df_train['Class'] == 0].drop(['Class'], 1).shape[0] / X_train_mino.shape[0]
+        X_train_mino_out = X_train_mino.drop(['cluster', 'density', 'prob'], axis=1).copy()
+        temp_kdtree = KDTree(X_train_mino.drop(['cluster', 'density', 'prob'], axis=1))
+        IR = df_train[df_train['Class'] == 0].drop(['Class'], axis=1).shape[0] / X_train_mino.shape[0]
         while IR > 2:
             i = random.choices(X_train_mino.index, weights=X_train_mino.prob, k=1)
-            vector_i = X_train_mino[X_train_mino.index == i[0]].drop(['cluster', 'density', 'prob'], 1)
+            vector_i = X_train_mino[X_train_mino.index == i[0]].drop(['cluster', 'density', 'prob'], axis=1)
         
             distances, index = temp_kdtree.query(vector_i, k_s)  
             
@@ -198,10 +200,10 @@ class tcc_indices_to_resample():
             i = random.choices(X_train_majo.index, weights=X_train_majo.prob, k=1)
             vector_i = X_train_majo[X_train_majo.index == i[0]].index.values
         
-            X_train_majo = X_train_majo.drop(vector_i, 0)
+            X_train_majo = X_train_majo.drop(vector_i, axis=0)
             
         
-        X_train_majo_out = X_train_majo.drop(['cluster', 'density', 'prob'], 1).copy()
+        X_train_majo_out = X_train_majo.drop(['cluster', 'density', 'prob'], axis=1).copy()
         
         
 

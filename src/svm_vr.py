@@ -35,24 +35,24 @@ class svm_balance_tcc():
 
         self.X,y = ult.splitxy(self.dataframe,self.target)
 
-        self.X_forfit = self.X.to_numpy()
-
-        self.X_train, self.y_train, self.X_test, self.y_test, self.X_val, self.y_val = ult.train_test_val(self.X_forfit,y)
-
-        self.X_test = pd.DataFrame(self.X_test,columns=self.X.columns)
+        self.X_train, self.y_train, self.X_test, self.y_test, self.X_val, self.y_val = ult.train_test_val(self.X,y)
 
         prep_feat_tuple = ult.create_prep_pipe2(self.dataframe,self.target)
         self.prep_feat = prep_feat_tuple[0]
 
         self.lists_pandarizer = list(prep_feat_tuple[1]) + list(prep_feat_tuple[2])
 
-        self.X_train_smote, self.y_train_smote = self.svm_vr2_0()
-
         self.pipe_prep = Pipeline([
                     ('transformer_prep', self.prep_feat),
                     ("pandarizer", FunctionTransformer(lambda x: pd.DataFrame(x, columns = self.lists_pandarizer))),
                 ])
-        self.pipe_prep.fit(self.X_train_smote)
+        self.pipe_prep.fit(self.X_train)
+
+        self.X_train = self.pipe_prep.transform(self.X_train)
+
+        self.X_train = self.X_train.to_numpy()
+
+        self.X_train_smote, self.y_train_smote = self.svm_vr2_0()
         
         LGBM = LGBMClassifier(random_state = 42, n_jobs = -1)
 
@@ -91,13 +91,13 @@ class svm_balance_tcc():
                                          n_jobs = -1, cv = cv, random_state = random_state, optimizer_kwargs = {'base_estimator': 'GP'})
         
         
-        LGBM_bayes_search.fit(self.pipe_prep.transform(self.X_train_smote), self.y_train_smote)        
+        LGBM_bayes_search.fit(self.X_train_smote, self.y_train_smote)        
 
         results_cv = pd.DataFrame(LGBM_bayes_search.cv_results_)
         
         temp = results_cv[['mean_train_score', 'mean_test_score']]
         temp['diff'] = temp['mean_test_score'] - temp['mean_train_score']
-        to_go = temp[abs(temp['diff']) < 0.05].sort_values(by = 'mean_test_score', ascending = False).head(1).index
+        to_go = temp[abs(temp['diff']) < 0.70].sort_values(by = 'mean_test_score', ascending = False).head(1).index
         
         params = results_cv.loc[to_go.values[0]]
         kwargs = params.params   
@@ -105,7 +105,7 @@ class svm_balance_tcc():
         
         best_LGBM = LGBMClassifier(random_state = random_state, n_jobs = -1, verbose = -1, **kwargs)
         
-        best_LGBM.fit(self.pipe_prep.transform(self.X_train_smote), self.y_train_smote, early_stopping_rounds = 10, verbose = 20, eval_metric = metric,
+        best_LGBM.fit(self.X_train_smote, self.y_train_smote, early_stopping_rounds = 10, verbose = 20, eval_metric = metric,
                      eval_set = [(self.pipe_prep.transform(self.X_test), self.y_test)]) 
         
         
@@ -120,10 +120,12 @@ class svm_balance_tcc():
     def svm_vr2_0(self):
         
         svm = sv.SVM_balance(random_state=42)
+        print(pd.DataFrame(self.X_train,columns=self.X.columns).head(1))
         X_train_smote, y_train_smote = svm.sample(self.X_train,
                                                              self.y_train)
 
         X_train_smote = pd.DataFrame(X_train_smote,columns=self.X.columns)
+        print(X_train_smote.head(1))
         return(X_train_smote,y_train_smote)
 
     def predict_proba(self, who : str = 'val'):

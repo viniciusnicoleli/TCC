@@ -44,8 +44,8 @@ class tcc_dt():
     def fit(self):
         
         bootstrap_base = self.bootstrap_rows(self.dataframe, 'to_bootstrap')
-        self.dataframe = self.dataframe.drop(['to_bootstrap'], 1)
-        bootstrap_base = bootstrap_base.drop(['to_bootstrap'], 1)
+        self.dataframe = self.dataframe.drop(['to_bootstrap'], axis=1)
+        bootstrap_base = bootstrap_base.drop(['to_bootstrap'], axis=1)
         
         self.dataframe = pd.concat([self.dataframe, bootstrap_base], axis = 0)
         

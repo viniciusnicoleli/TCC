@@ -33,7 +33,7 @@ class tcc_proposto():
         X_train, y_train, X_test, y_test, X_val, y_val = ult.train_test_val(X,y)
         df_train = pd.merge(X_train, pd.DataFrame(y_train),left_index=True, right_index=True, how = 'inner')
         
-        indices = itc.tcc_indices_to_resample(dataframe = df_train, target = self.target)
+        indices = itc.tcc_indices_to_resample(dataframe = df_train.select_dtypes(exclude=['object']), target = self.target)
         indices.fit()
         indx = indices.indices
         
@@ -88,7 +88,7 @@ class tcc_proposto():
         temp_7 = pd.DataFrame(temp_7, columns = ['predict'])
         temp_8 = pd.DataFrame(temp_8, columns = ['predict'])
         
-        temp = pd.concat([temp_0, temp_1, temp_2, temp_3, temp_4, temp_5, temp_6, temp_7, temp_8], 1)
+        temp = pd.concat([temp_0, temp_1, temp_2, temp_3, temp_4, temp_5, temp_6, temp_7, temp_8], axis=1)
            
         y_score = temp.mean(axis=1).to_numpy()
         
@@ -132,7 +132,7 @@ class tcc_proposto():
         temp_7 = pd.DataFrame(temp_7, columns = ['predict'])
         temp_8 = pd.DataFrame(temp_8, columns = ['predict'])
         
-        temp = pd.concat([temp_0, temp_1, temp_2, temp_3, temp_4, temp_5, temp_6, temp_7, temp_8], 1)
+        temp = pd.concat([temp_0, temp_1, temp_2, temp_3, temp_4, temp_5, temp_6, temp_7, temp_8], axis=1)
            
         y_score = temp.mean(axis=1).to_numpy()
         average_precision = average_precision_score(dic_y[who], y_score)
@@ -168,7 +168,7 @@ class tcc_proposto():
         temp_7 = pd.DataFrame(temp_7, columns = ['predict'])
         temp_8 = pd.DataFrame(temp_8, columns = ['predict'])
         
-        temp = pd.concat([temp_0, temp_1, temp_2, temp_3, temp_4, temp_5, temp_6, temp_7, temp_8], 1)
+        temp = pd.concat([temp_0, temp_1, temp_2, temp_3, temp_4, temp_5, temp_6, temp_7, temp_8], axis=1)
            
         y_score_train = temp.mean(axis=1).to_numpy()
 
@@ -194,7 +194,7 @@ class tcc_proposto():
         temp_7 = pd.DataFrame(temp_7, columns = ['predict'])
         temp_8 = pd.DataFrame(temp_8, columns = ['predict'])
         
-        temp = pd.concat([temp_0, temp_1, temp_2, temp_3, temp_4, temp_5, temp_6, temp_7, temp_8], 1)    
+        temp = pd.concat([temp_0, temp_1, temp_2, temp_3, temp_4, temp_5, temp_6, temp_7, temp_8], axis=1)    
          
         y_score_val = temp.mean(axis=1).to_numpy()
         

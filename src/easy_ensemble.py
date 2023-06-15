@@ -132,8 +132,10 @@ class tcc_easyemsemble():
         
         temp = results_cv[['mean_train_score', 'mean_test_score']]
         temp['diff'] = temp['mean_test_score'] - temp['mean_train_score']
-        to_go = temp[abs(temp['diff']) < 0.2].sort_values(by = 'mean_test_score', ascending = False).head(1).index
+        to_go = temp.sort_values(by = 'mean_test_score', ascending = False).head(1).index
         
+        #[abs(temp['diff']) < 0.6] 
+
         params = results_cv.loc[to_go.values[0]]
         kwargs = params.params   
         kwargs = collections.OrderedDict((key.replace('estimator__', ''), value) for key, value in kwargs.items())
