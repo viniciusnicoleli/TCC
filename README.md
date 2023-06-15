@@ -29,11 +29,10 @@ For now we don't have the intention to drop it as a package...
 ______________________________________________________________________________________________________________________________
 ### :diamond_shape_with_a_dot_inside: Methods implemented:
 
-* New Method created by @felipearaujolima
+* New Method BBO created by @felipearaujolima
 * SVM Balance from smote-variants package
 * DBSMOTE from smote-variants package
 * MCT from smote-variants package
-* CCR
 * Easy Ensemble
 * LightGBM
 * SMOTE
